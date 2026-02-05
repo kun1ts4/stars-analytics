@@ -20,7 +20,7 @@ func main() {
 
 	brokersStr := os.Getenv("KAFKA_BROKERS")
 	if brokersStr == "" {
-		brokersStr = "localhost:9092"
+		brokersStr = "kafka:9092"
 	}
 	brokers := strings.Split(brokersStr, ",")
 

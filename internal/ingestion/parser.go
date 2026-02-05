@@ -8,11 +8,11 @@ import (
 	"io"
 	"log"
 
-	"github.com/kun1ts4/stars-analytics/internal/ingestion/dto"
+	"github.com/kun1ts4/stars-analytics/internal/dto"
 )
 
 // ParseStream reads a gzipped JSON stream and sends events to the channel
-func ParseStream(r io.Reader, events chan<- dto.EventDTO) error {
+func ParseStream(r io.Reader, events chan<- dto.GHEvent) error {
 	gz, err := gzip.NewReader(r)
 	if err != nil {
 		return fmt.Errorf("gzip reader: %w", err)
@@ -46,8 +46,8 @@ func ParseStream(r io.Reader, events chan<- dto.EventDTO) error {
 	return scanner.Err()
 }
 
-func parseEvent(bytes []byte) (dto.EventDTO, error) {
-	event := dto.EventDTO{}
+func parseEvent(bytes []byte) (dto.GHEvent, error) {
+	event := dto.GHEvent{}
 	err := json.Unmarshal(bytes, &event)
 	if err != nil {
 		return event, fmt.Errorf("unmarshal event: %w", err)

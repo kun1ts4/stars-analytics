@@ -2,15 +2,12 @@ package ingestion
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 
-	"github.com/kun1ts4/stars-analytics/internal/ingestion/dto"
 	"github.com/kun1ts4/stars-analytics/pkg/kafka"
 )
 
@@ -96,37 +93,4 @@ func (f *GHArchiveFetcher) downloadHour(date time.Time) (io.ReadCloser, error) {
 	}
 	return resp.Body, nil
 	return resp.Body, nil
-}
-
-func (f *GHArchiveFetcher) processStream(gzStream io.Reader) error {
-	events := make(chan dto.EventDTO, 10000)
-
-	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for event := range events {
-				if event.Type == "WatchEvent" && event.Payload.Action == "started" {
-					if err := event.Validate(); err != nil {
-						log.Printf("invalid event: %v", err)
-						continue
-					}
-					data, err := json.Marshal(event)
-					if err != nil {
-						log.Printf("failed to marshal event: %v", err)
-						continue
-					}
-					if err := f.producer.Send(context.Background(), event.ID, data); err != nil {
-						log.Printf("failed to send event to kafka: %v", err)
-					}
-				}
-			}
-		}()
-	}
-
-	err := ParseStream(gzStream, events)
-	close(events)
-	wg.Wait()
-	return err
 }

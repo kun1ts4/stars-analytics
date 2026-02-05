@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	dsn := "host=postgres user=postgres password=postgres dbname=stars_analytics port=5432 sslmode=disable"
+	dsn := "postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)

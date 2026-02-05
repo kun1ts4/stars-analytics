@@ -54,8 +54,10 @@ services:
       context: .
       dockerfile: cmd/processor/Dockerfile
     depends_on:
-      - kafka
-      - postgres
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
       KAFKA_BROKERS: "kafka:9092"
       POSTGRES_DSN: "postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable"
@@ -70,6 +72,16 @@ services:
       - postgres
     environment:
       POSTGRES_DSN: "postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: cmd/migrate/Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_DSN: "postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable"
+
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest

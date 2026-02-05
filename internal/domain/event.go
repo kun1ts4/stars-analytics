@@ -5,20 +5,18 @@ import (
 )
 
 type Event struct {
-	ID      string
-	Type    string
-	Payload struct {
-		Action string
-	}
-	Repo struct {
-		ID   int
-		Name string
-		URL  string
-	}
-	Actor struct {
-		ID    int
-		Login string
-		URL   string
-	}
+	ID     string
+	Action ActionType
+
+	RepoID     int64
+	RepoName   string
+	ActorLogin string
+
 	CreatedAt time.Time
 }
+
+type ActionType string
+
+const (
+	ActionStarred ActionType = "stared"
+)
