@@ -1,3 +1,4 @@
+// Package dto содержит объекты передачи данных для внешних данных.
 package dto
 
 import (
@@ -5,6 +6,7 @@ import (
 	"time"
 )
 
+// GHEvent представляет событие GitHub из API.
 type GHEvent struct {
 	ID      string `json:"id"`
 	Type    string `json:"type"`
@@ -12,7 +14,7 @@ type GHEvent struct {
 		Action string `json:"action"`
 	} `json:"payload"`
 	Repo struct {
-		ID   int64    `json:"id"`
+		ID   int64  `json:"id"`
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	}
@@ -24,6 +26,7 @@ type GHEvent struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// Validate проверяет, имеет ли GHEvent обязательные поля.
 func (e GHEvent) Validate() error {
 	if e.ID == "" {
 		return errors.New("ID is required")

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package api;
+option go_package = "github.com/kun1ts4/stars-analytics/proto;proto";
+
+service Stats {
+  rpc TopN(NRequest) returns (TopResponse);
+}
+
+message NRequest{
+  uint64 n = 1;
+}
+
+message TopResponse{
+  repeated Repo repos = 1;
+}
+
+message Repo{
+  string name = 1;
+  uint64 stars_last_hour = 2;
+  uint64 total_stars = 3;
+}

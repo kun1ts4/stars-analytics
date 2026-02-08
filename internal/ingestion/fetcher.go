@@ -1,3 +1,4 @@
+// Package ingestion обрабатывает получение и обработку данных архива GitHub.
 package ingestion
 
 import (
@@ -11,13 +12,19 @@ import (
 	"github.com/kun1ts4/stars-analytics/pkg/kafka"
 )
 
+// GHArchiveFetcher получает события GitHub из GH Archive.
 type GHArchiveFetcher struct {
 	httpClient    *http.Client
 	lastProcessed time.Time
 	producer      *kafka.Producer
 }
 
-func NewGHArchiveFetcher(httpClient *http.Client, lastProcessed time.Time, producer *kafka.Producer) *GHArchiveFetcher {
+// NewGHArchiveFetcher создает новый GHArchiveFetcher.
+func NewGHArchiveFetcher(
+	httpClient *http.Client,
+	lastProcessed time.Time,
+	producer *kafka.Producer,
+) *GHArchiveFetcher {
 	return &GHArchiveFetcher{
 		httpClient:    httpClient,
 		lastProcessed: lastProcessed,
@@ -25,36 +32,28 @@ func NewGHArchiveFetcher(httpClient *http.Client, lastProcessed time.Time, produ
 	}
 }
 
+// Run запускает цикл получения.
 func (f *GHArchiveFetcher) Run(ctx context.Context) error {
-	ticker := time.NewTicker(time.Hour)
-	defer ticker.Stop()
-
-	// Initial run immediately
-	if err := f.processCurrentHour(); err != nil {
-		log.Printf("initial fetch failed: %v", err)
-	}
-
 	for {
 		select {
-		case <-ticker.C:
-			if err := f.processCurrentHour(); err != nil {
-				log.Printf("fetch failed: %v", err)
-			}
 		case <-ctx.Done():
 			return ctx.Err()
+		default:
+			nextHour := f.lastProcessed.Add(time.Hour)
+			if time.Since(nextHour) >= time.Hour {
+				if err := f.fetchHour(nextHour); err != nil {
+					log.Printf("fetch failed: %v", err)
+				}
+			} else {
+				time.Sleep(time.Minute)
+			}
 		}
 	}
 }
 
-func (f *GHArchiveFetcher) processCurrentHour() error {
-	hourToFetch := time.Now().UTC().Add(-1 * time.Hour)
-	if err := f.fetchHour(hourToFetch); err != nil {
-		return fmt.Errorf("failed to fetch hour %s: %w", hourToFetch, err)
-	}
-	return nil
-}
-
 func (f *GHArchiveFetcher) fetchHour(t time.Time) error {
+	defer fmt.Printf("https://data.gharchive.org/%s-%d.json.gz",
+		t.Format("2006-01-02"), t.Hour())
 	if time.Since(t) < time.Hour {
 		return fmt.Errorf("data not ready yet, need to wait")
 	}
@@ -78,8 +77,11 @@ func (f *GHArchiveFetcher) fetchHour(t time.Time) error {
 }
 
 func (f *GHArchiveFetcher) downloadHour(date time.Time) (io.ReadCloser, error) {
-	url := fmt.Sprintf("https://data.gharchive.org/%s-%d.json.gz",
-		date.Format("2006-01-02"), date.Hour())
+	url := fmt.Sprintf(
+		"https://data.gharchive.org/%s-%d.json.gz",
+		date.Format("2006-01-02"),
+		date.Hour(),
+	)
 
 	resp, err := f.httpClient.Get(url)
 	if err != nil {
@@ -91,6 +93,5 @@ func (f *GHArchiveFetcher) downloadHour(date time.Time) (io.ReadCloser, error) {
 		}
 		return nil, fmt.Errorf("status %d", resp.StatusCode)
 	}
-	return resp.Body, nil
 	return resp.Body, nil
 }

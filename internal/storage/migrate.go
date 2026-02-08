@@ -1,3 +1,4 @@
+// Package storage предоставляет функции для миграции и хранения данных.
 package storage
 
 import (
@@ -5,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Migrate выполняет миграцию базы данных.
 func Migrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&models.HourlyAggregate{},

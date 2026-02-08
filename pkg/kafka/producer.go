@@ -7,10 +7,12 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// Producer производит сообщения в Kafka.
 type Producer struct {
 	writer *kafka.Writer
 }
 
+// NewProducer создает новый Producer.
 func NewProducer(brokers []string, topic string) *Producer {
 	return &Producer{
 		writer: &kafka.Writer{
@@ -27,6 +29,7 @@ func NewProducer(brokers []string, topic string) *Producer {
 	}
 }
 
+// Send отправляет сообщение в Kafka.
 func (p *Producer) Send(ctx context.Context, key string, value []byte) error {
 	return p.writer.WriteMessages(ctx,
 		kafka.Message{
@@ -37,6 +40,7 @@ func (p *Producer) Send(ctx context.Context, key string, value []byte) error {
 	)
 }
 
+// Close закрывает Producer.
 func (p *Producer) Close() error {
 	return p.writer.Close()
 }

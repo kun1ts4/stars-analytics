@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	processor "github.com/kun1ts4/stars-analytics/internal/processor"
 	"github.com/kun1ts4/stars-analytics/internal/storage"
@@ -14,12 +15,17 @@ import (
 )
 
 func main() {
-	db, err := gorm.Open(postgres.Open("host=postgres user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"), &gorm.Config{})
+	db, err := gorm.Open(
+		postgres.Open(
+			"host=postgres user=postgres password=postgres dbname=postgres port=5432 sslmode=disable",
+		),
+		&gorm.Config{},
+	)
 	if err != nil {
 		panic("failed to connect database")
 	}
 
-	repo := &storage.StatsGormRepo{Db: db}
+	repo := &storage.StatsGormRepo{Db: db, Mu: sync.Mutex{}}
 	consumer := kafka.NewConsumer([]string{"kafka:9092"}, "github.events")
 
 	proc := processor.Processor{

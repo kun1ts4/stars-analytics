@@ -1,3 +1,4 @@
+// Package processor обрабатывает события из Kafka.
 package processor
 
 //

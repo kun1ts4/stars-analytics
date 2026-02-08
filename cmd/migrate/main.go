@@ -1,3 +1,4 @@
+// Package main предоставляет команду миграции базы данных для приложения stars-analytics.
 package main
 
 import (

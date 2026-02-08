@@ -7,28 +7,31 @@ import (
 	"github.com/kun1ts4/stars-analytics/internal/domain"
 )
 
+// KafkaEvent представляет сообщение события для Kafka.
 type KafkaEvent struct {
 	EventID   string            `json:"event_id"`
 	Action    domain.ActionType `json:"action"`
-	RepoID    int64               `json:"repo_id"`
+	RepoID    int64             `json:"repo_id"`
 	RepoName  string            `json:"repo_name"`
 	UserLogin string            `json:"user_login"`
 	Timestamp time.Time         `json:"timestamp"`
 }
 
+// ToDomain преобразует KafkaEvent в доменное Event.
 func (e KafkaEvent) ToDomain() domain.Event {
 	event := domain.Event{
-		ID:        e.EventID,
-		Action:    e.Action,
-		RepoID:    e.RepoID,
-		RepoName:  e.RepoName,
+		ID:         e.EventID,
+		Action:     e.Action,
+		RepoID:     e.RepoID,
+		RepoName:   e.RepoName,
 		ActorLogin: e.UserLogin,
-		CreatedAt: e.Timestamp,
+		CreatedAt:  e.Timestamp,
 	}
 
 	return event
 }
 
+// ToKafkaEvent преобразует GHEvent в KafkaEvent.
 func ToKafkaEvent(gh GHEvent) (KafkaEvent, error) {
 	event := KafkaEvent{
 		EventID:   gh.ID,
