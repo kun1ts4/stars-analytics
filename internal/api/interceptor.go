@@ -5,31 +5,31 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kun1ts4/stars-analytics/internal/metrics"
+	"github.com/kun1ts4/stars-analytics/internal/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
+// MetricsInterceptor собирает метрики Prometheus для gRPC запросов.
 func MetricsInterceptor(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
 ) (interface{}, error) {
-
 	start := time.Now()
 
 	resp, err := handler(ctx, req)
 
 	service, method := splitMethod(info.FullMethod)
 
-	metrics.Requests.WithLabelValues(service, method).Inc()
-	metrics.Latency.WithLabelValues(service, method).
+	prometheus.Requests.WithLabelValues(service, method).Inc()
+	prometheus.Latency.WithLabelValues(service, method).
 		Observe(time.Since(start).Seconds())
 
 	if err != nil {
 		st, _ := status.FromError(err)
-		metrics.Errors.WithLabelValues(service, method, st.Code().String()).Inc()
+		prometheus.Errors.WithLabelValues(service, method, st.Code().String()).Inc()
 	}
 
 	return resp, err

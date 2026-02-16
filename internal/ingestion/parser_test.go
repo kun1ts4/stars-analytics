@@ -9,7 +9,9 @@ import (
 )
 
 func TestParseEvent(t *testing.T) {
-	in := []byte("{\"id\":\"3488012293\",\"type\":\"WatchEvent\",\"actor\":{\"id\":11017174,\"login\":\"alexylem\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/alexylem\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/11017174?\"},\"repo\":{\"id\":48878218,\"name\":\"alexylem/projectpage\",\"url\":\"https://api.github.com/repos/alexylem/projectpage\"},\"payload\":{\"action\":\"started\"},\"public\":true,\"created_at\":\"2016-01-02T15:00:03Z\"}\n")
+	in := []byte(
+		"{\"id\":\"3488012293\",\"type\":\"WatchEvent\",\"actor\":{\"id\":11017174,\"login\":\"alexylem\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/alexylem\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/11017174?\"},\"repo\":{\"id\":48878218,\"name\":\"alexylem/projectpage\",\"url\":\"https://api.github.com/repos/alexylem/projectpage\"},\"payload\":{\"action\":\"started\"},\"public\":true,\"created_at\":\"2016-01-02T15:00:03Z\"}\n",
+	)
 
 	exp := dto.GHEvent{
 		ID:   "3488012293",

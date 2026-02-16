@@ -25,7 +25,7 @@ func (s *Server) TopN(_ context.Context, req *proto.NRequest) (*proto.TopRespons
 	return &proto.TopResponse{Repos: repos}, nil
 }
 
+// Healthy возвращает статус здоровья сервиса.
 func (s *Server) Healthy(_ context.Context, _ *proto.Empty) (*proto.HealthyResponse, error) {
 	return &proto.HealthyResponse{Status: "ok"}, nil
-
 }

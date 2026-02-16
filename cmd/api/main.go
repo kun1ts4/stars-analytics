@@ -8,7 +8,7 @@ import (
 
 	server "github.com/kun1ts4/stars-analytics/internal/api"
 	"github.com/kun1ts4/stars-analytics/internal/config"
-	"github.com/kun1ts4/stars-analytics/internal/metrics"
+	"github.com/kun1ts4/stars-analytics/internal/prometheus"
 	gormrepo "github.com/kun1ts4/stars-analytics/internal/storage/gorm"
 	"github.com/kun1ts4/stars-analytics/pkg/logger"
 	"github.com/kun1ts4/stars-analytics/pkg/pb/github.com/kun1ts4/stars-analytics/proto"
@@ -24,8 +24,8 @@ func main() {
 		logger.WithError(err).Fatal("failed to load config")
 	}
 
-	// Initialize Prometheus metrics
-	metrics.Init()
+	// Initialize Prometheus prometheus
+	prometheus.Init()
 
 	db, err := gorm.Open(
 		postgres.Open(cfg.Database.DSN()),
@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		logger.WithError(err).Fatal("failed to get underlying sql.DB")
 	}
-	metrics.RegisterDBStats(sqlDB)
+	prometheus.RegisterDBStats(sqlDB)
 
 	repo := gormrepo.NewStatsRepo(db)
 
@@ -49,15 +49,15 @@ func main() {
 		Repo:                     repo,
 	}
 
-	// Start metrics HTTP server
+	// Start prometheus HTTP server
 	go func() {
-		http.Handle("/metrics", metrics.Handler())
+		http.Handle("/metrics", prometheus.Handler())
 		metricsAddr := ":9090"
 		logger.WithFields(logrus.Fields{
 			"address": metricsAddr,
 		}).Info("Metrics server listening")
 		if err := http.ListenAndServe(metricsAddr, nil); err != nil {
-			logger.WithError(err).Fatal("failed to start metrics server")
+			logger.WithError(err).Fatal("failed to start prometheus server")
 		}
 	}()
 
@@ -66,7 +66,7 @@ func main() {
 		logger.WithError(err).Fatal("failed to listen")
 	}
 
-	// Create gRPC server with metrics interceptor
+	// Create gRPC server with prometheus interceptor
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(server.MetricsInterceptor),
 	)

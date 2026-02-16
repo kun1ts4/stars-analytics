@@ -1,3 +1,4 @@
+// Package processor обрабатывает события из Kafka и сохраняет агрегированные данные.
 package processor
 
 import (

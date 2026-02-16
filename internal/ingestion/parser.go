@@ -46,6 +46,7 @@ func ParseStream(r io.Reader, events chan<- dto.GHEvent) error {
 	return scanner.Err()
 }
 
+// ParseEvent парсит JSON-строку события GitHub в структуру GHEvent.
 func ParseEvent(bytes []byte) (dto.GHEvent, error) {
 	event := dto.GHEvent{}
 	err := json.Unmarshal(bytes, &event)

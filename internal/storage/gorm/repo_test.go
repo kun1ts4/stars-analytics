@@ -158,7 +158,9 @@ func TestGetTopN_EmptyResult(t *testing.T) {
 
 	hourBucket := time.Now().UTC().Add(time.Hour * -1).Truncate(time.Hour)
 
-	rows := sqlmock.NewRows([]string{"id", "repo_id", "repo_name", "stars", "hour", "created_at", "updated_at"})
+	rows := sqlmock.NewRows(
+		[]string{"id", "repo_id", "repo_name", "stars", "hour", "created_at", "updated_at"},
+	)
 
 	mock.ExpectQuery(`SELECT \* FROM "hourly_aggregates"`).
 		WithArgs(hourBucket, 10).
