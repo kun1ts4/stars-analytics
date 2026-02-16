@@ -1,0 +1,1 @@
+[![CI](https://github.com/kun1ts4/stars-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/kun1ts4/stars-analytics/actions/workflows/ci.yml)
