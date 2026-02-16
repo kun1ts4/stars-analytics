@@ -4,36 +4,44 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"sync"
 
+	"github.com/kun1ts4/stars-analytics/internal/config"
 	processor "github.com/kun1ts4/stars-analytics/internal/processor"
-	"github.com/kun1ts4/stars-analytics/internal/storage"
+	gormrepo "github.com/kun1ts4/stars-analytics/internal/storage/gorm"
 	"github.com/kun1ts4/stars-analytics/pkg/kafka"
+	"github.com/kun1ts4/stars-analytics/pkg/logger"
+	"github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logger.WithError(err).Fatal("failed to load config")
+	}
+
 	db, err := gorm.Open(
-		postgres.Open(
-			"host=postgres user=postgres password=postgres dbname=postgres port=5432 sslmode=disable",
-		),
+		postgres.Open(cfg.Database.DSN()),
 		&gorm.Config{},
 	)
 	if err != nil {
-		panic("failed to connect database")
+		logger.WithError(err).Fatal("failed to connect database")
 	}
 
-	repo := &storage.StatsGormRepo{Db: db, Mu: sync.Mutex{}}
-	consumer := kafka.NewConsumer([]string{"kafka:9092"}, "github.events")
+	repo := gormrepo.NewStatsRepo(db)
+	consumer := kafka.NewConsumer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
 
 	proc := processor.Processor{
 		Consumer:  consumer,
 		StatsRepo: repo,
 	}
+
+	logger.WithFields(logrus.Fields{
+		"topic": cfg.Kafka.Topic,
+	}).Info("starting processor")
 	err = proc.Run(context.Background())
 	if err != nil {
-		fmt.Println(fmt.Errorf("running processor: %v", err))
+		logger.WithError(err).Fatal("error running processor")
 	}
 }

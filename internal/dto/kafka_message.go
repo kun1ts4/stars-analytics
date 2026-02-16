@@ -32,21 +32,21 @@ func (e KafkaEvent) ToDomain() domain.Event {
 }
 
 // ToKafkaEvent преобразует GHEvent в KafkaEvent.
-func ToKafkaEvent(gh GHEvent) (KafkaEvent, error) {
-	event := KafkaEvent{
-		EventID:   gh.ID,
-		RepoID:    gh.Repo.ID,
-		RepoName:  gh.Repo.Name,
-		UserLogin: gh.Actor.Login,
-		Timestamp: gh.CreatedAt,
-	}
+func ToKafkaEvent(gh GHEvent) (*KafkaEvent, error) {
 	switch gh.Type {
 	case "WatchEvent":
-		if gh.Payload.Action == "started" {
-			event.Action = domain.ActionStarred
+		if gh.Payload.Action != "started" {
+			return nil, fmt.Errorf("unsupported action for WatchEvent: %s", gh.Payload.Action)
 		}
+		return &KafkaEvent{
+			EventID:   gh.ID,
+			Action:    domain.ActionStarred,
+			RepoID:    gh.Repo.ID,
+			RepoName:  gh.Repo.Name,
+			UserLogin: gh.Actor.Login,
+			Timestamp: gh.CreatedAt,
+		}, nil
 	default:
-		return KafkaEvent{}, fmt.Errorf("unsupported event type: %s", gh.Type)
+		return nil, fmt.Errorf("unsupported event type: %s", gh.Type)
 	}
-	return event, nil
 }

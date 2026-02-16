@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/kun1ts4/stars-analytics/internal/dto"
+	"github.com/kun1ts4/stars-analytics/pkg/logger"
 )
 
 // ParseStream reads a gzipped JSON stream and sends events to the channel
@@ -19,7 +19,7 @@ func ParseStream(r io.Reader, events chan<- dto.GHEvent) error {
 	}
 	defer func() {
 		if err := gz.Close(); err != nil {
-			log.Printf("failed to close gzip reader: %v", err)
+			logger.WithError(err).Warn("failed to close gzip reader")
 		}
 	}()
 
@@ -30,9 +30,9 @@ func ParseStream(r io.Reader, events chan<- dto.GHEvent) error {
 
 	count := 0
 	for scanner.Scan() {
-		event, err := parseEvent(scanner.Bytes())
+		event, err := ParseEvent(scanner.Bytes())
 		if err != nil {
-			log.Printf("failed to parse event: %v", err)
+			logger.WithError(err).Warn("failed to parse event")
 			continue
 		}
 		events <- event
@@ -40,13 +40,13 @@ func ParseStream(r io.Reader, events chan<- dto.GHEvent) error {
 	}
 
 	if count == 0 {
-		log.Printf("No events found in the stream")
+		logger.Warn("no events found in the stream")
 	}
 
 	return scanner.Err()
 }
 
-func parseEvent(bytes []byte) (dto.GHEvent, error) {
+func ParseEvent(bytes []byte) (dto.GHEvent, error) {
 	event := dto.GHEvent{}
 	err := json.Unmarshal(bytes, &event)
 	if err != nil {

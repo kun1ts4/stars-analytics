@@ -7,14 +7,18 @@ import (
 
 	"github.com/kun1ts4/stars-analytics/internal/domain"
 	"github.com/kun1ts4/stars-analytics/internal/dto"
-	"github.com/kun1ts4/stars-analytics/internal/storage"
-	"github.com/kun1ts4/stars-analytics/pkg/kafka"
 )
+
+// KafkaConsumer определяет интерфейс для потребителя Kafka.
+type KafkaConsumer interface {
+	Read(ctx context.Context) ([]byte, error)
+	Close() error
+}
 
 // Processor обрабатывает события.
 type Processor struct {
-	Consumer  *kafka.Consumer
-	StatsRepo *storage.StatsGormRepo
+	Consumer  KafkaConsumer
+	StatsRepo domain.StatsRepo
 }
 
 // Run запускает обработку событий.

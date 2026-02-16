@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/kun1ts4/stars-analytics/internal/config"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -13,7 +14,7 @@ type Producer struct {
 }
 
 // NewProducer создает новый Producer.
-func NewProducer(brokers []string, topic string) *Producer {
+func NewProducer(brokers []string, topic string, cfg config.KafkaProducerConfig) *Producer {
 	return &Producer{
 		writer: &kafka.Writer{
 			Addr:                   kafka.TCP(brokers...),
@@ -21,10 +22,10 @@ func NewProducer(brokers []string, topic string) *Producer {
 			Balancer:               &kafka.Hash{},
 			AllowAutoTopicCreation: true,
 
-			BatchSize:    100,
-			BatchTimeout: 100 * time.Millisecond,
-			RequiredAcks: kafka.RequireOne,
-			MaxAttempts:  3,
+			BatchSize:    cfg.BatchSize,
+			BatchTimeout: time.Duration(cfg.BatchTimeoutMs) * time.Millisecond,
+			RequiredAcks: kafka.RequiredAcks(cfg.RequiredAcks),
+			MaxAttempts:  cfg.MaxAttempts,
 		},
 	}
 }

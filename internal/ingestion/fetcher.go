@@ -5,35 +5,48 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
-	"github.com/kun1ts4/stars-analytics/pkg/kafka"
+	"github.com/sirupsen/logrus"
+
+	"github.com/kun1ts4/stars-analytics/internal/config"
+	"github.com/kun1ts4/stars-analytics/pkg/logger"
 )
+
+// KafkaProducer определяет интерфейс для производителя Kafka.
+type KafkaProducer interface {
+	Send(ctx context.Context, key string, value []byte) error
+	Close() error
+}
 
 // GHArchiveFetcher получает события GitHub из GH Archive.
 type GHArchiveFetcher struct {
 	httpClient    *http.Client
 	lastProcessed time.Time
-	producer      *kafka.Producer
+	producer      KafkaProducer
+	config        config.IngestionConfig
 }
 
 // NewGHArchiveFetcher создает новый GHArchiveFetcher.
 func NewGHArchiveFetcher(
 	httpClient *http.Client,
 	lastProcessed time.Time,
-	producer *kafka.Producer,
+	producer KafkaProducer,
+	cfg config.IngestionConfig,
 ) *GHArchiveFetcher {
 	return &GHArchiveFetcher{
 		httpClient:    httpClient,
 		lastProcessed: lastProcessed,
 		producer:      producer,
+		config:        cfg,
 	}
 }
 
 // Run запускает цикл получения.
 func (f *GHArchiveFetcher) Run(ctx context.Context) error {
+	pollInterval := time.Duration(f.config.PollIntervalSec) * time.Second
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -42,18 +55,18 @@ func (f *GHArchiveFetcher) Run(ctx context.Context) error {
 			nextHour := f.lastProcessed.Add(time.Hour)
 			if time.Since(nextHour) >= time.Hour {
 				if err := f.fetchHour(nextHour); err != nil {
-					log.Printf("fetch failed: %v", err)
+					logger.WithError(err).Warn("fetch failed")
 				}
 			} else {
-				time.Sleep(time.Minute)
+				time.Sleep(pollInterval)
 			}
 		}
 	}
 }
 
 func (f *GHArchiveFetcher) fetchHour(t time.Time) error {
-	defer fmt.Printf("https://data.gharchive.org/%s-%d.json.gz",
-		t.Format("2006-01-02"), t.Hour())
+	defer fmt.Printf("%s%s-%d.json.gz",
+		f.config.GHArchiveURL, t.Format("2006-01-02"), t.Hour())
 	if time.Since(t) < time.Hour {
 		return fmt.Errorf("data not ready yet, need to wait")
 	}
@@ -63,7 +76,7 @@ func (f *GHArchiveFetcher) fetchHour(t time.Time) error {
 	}
 	defer func() {
 		if err := body.Close(); err != nil {
-			log.Printf("failed to close body: %v", err)
+			logger.WithError(err).Warn("failed to close body")
 		}
 	}()
 
@@ -72,16 +85,23 @@ func (f *GHArchiveFetcher) fetchHour(t time.Time) error {
 	}
 
 	f.lastProcessed = t
-	log.Printf("Finished hour: %s", t.Format("2006-01-02 15"))
+	logger.WithFields(logrus.Fields{
+		"hour": t.Format("2006-01-02 15"),
+	}).Info("finished processing hour")
 	return nil
 }
 
 func (f *GHArchiveFetcher) downloadHour(date time.Time) (io.ReadCloser, error) {
 	url := fmt.Sprintf(
-		"https://data.gharchive.org/%s-%d.json.gz",
+		"%s%s-%02d.json.gz",
+		f.config.GHArchiveURL,
 		date.Format("2006-01-02"),
 		date.Hour(),
 	)
+
+	logger.WithFields(logrus.Fields{
+		"url": url,
+	}).Info("downloading")
 
 	resp, err := f.httpClient.Get(url)
 	if err != nil {
@@ -89,7 +109,7 @@ func (f *GHArchiveFetcher) downloadHour(date time.Time) (io.ReadCloser, error) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+			logger.WithError(err).Warn("failed to close response body")
 		}
 		return nil, fmt.Errorf("status %d", resp.StatusCode)
 	}

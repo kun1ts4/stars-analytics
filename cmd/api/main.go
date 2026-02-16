@@ -4,45 +4,78 @@ package main
 
 import (
 	"net"
-	"sync"
+	"net/http"
 
 	server "github.com/kun1ts4/stars-analytics/internal/api"
-	"github.com/kun1ts4/stars-analytics/internal/storage"
+	"github.com/kun1ts4/stars-analytics/internal/config"
+	"github.com/kun1ts4/stars-analytics/internal/metrics"
+	gormrepo "github.com/kun1ts4/stars-analytics/internal/storage/gorm"
+	"github.com/kun1ts4/stars-analytics/pkg/logger"
 	"github.com/kun1ts4/stars-analytics/pkg/pb/github.com/kun1ts4/stars-analytics/proto"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logger.WithError(err).Fatal("failed to load config")
+	}
+
+	// Initialize Prometheus metrics
+	metrics.Init()
+
 	db, err := gorm.Open(
-		postgres.Open(
-			"host=postgres user=postgres password=postgres dbname=postgres port=5432 sslmode=disable",
-		),
+		postgres.Open(cfg.Database.DSN()),
 		&gorm.Config{},
 	)
 	if err != nil {
-		panic("failed to connect database")
+		logger.WithError(err).Fatal("failed to connect database")
 	}
 
-	repo := storage.StatsGormRepo{
-		Db: db,
-		Mu: sync.Mutex{},
+	// Register DB connection pool stats
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.WithError(err).Fatal("failed to get underlying sql.DB")
 	}
+	metrics.RegisterDBStats(sqlDB)
+
+	repo := gormrepo.NewStatsRepo(db)
 
 	srv := server.Server{
 		UnimplementedStatsServer: &proto.UnimplementedStatsServer{},
-		Repo:                     &repo,
+		Repo:                     repo,
 	}
 
-	listen, err := net.Listen("tcp", ":50051")
+	// Start metrics HTTP server
+	go func() {
+		http.Handle("/metrics", metrics.Handler())
+		metricsAddr := ":9090"
+		logger.WithFields(logrus.Fields{
+			"address": metricsAddr,
+		}).Info("Metrics server listening")
+		if err := http.ListenAndServe(metricsAddr, nil); err != nil {
+			logger.WithError(err).Fatal("failed to start metrics server")
+		}
+	}()
+
+	listen, err := net.Listen("tcp", cfg.GRPC.Address())
 	if err != nil {
-		panic("failed to listen")
+		logger.WithError(err).Fatal("failed to listen")
 	}
 
-	s := grpc.NewServer()
+	// Create gRPC server with metrics interceptor
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(server.MetricsInterceptor),
+	)
 	proto.RegisterStatsServer(s, &srv)
+
+	logger.WithFields(logrus.Fields{
+		"address": cfg.GRPC.Address(),
+	}).Info("gRPC server listening")
 	if err := s.Serve(listen); err != nil {
-		panic("failed to serve")
+		logger.WithError(err).Fatal("failed to serve")
 	}
 }

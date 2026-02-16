@@ -10,4 +10,5 @@ RUN go build -o processor ./cmd/processor/main.go
 FROM alpine:latest
 WORKDIR /root/
 COPY --from=builder /app/processor .
+COPY --from=builder /app/internal/config/config.yaml ./internal/config/config.yaml
 CMD ["./processor"]

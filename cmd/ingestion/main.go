@@ -4,35 +4,35 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/kun1ts4/stars-analytics/internal/config"
 	"github.com/kun1ts4/stars-analytics/internal/ingestion"
 	"github.com/kun1ts4/stars-analytics/pkg/kafka"
+	"github.com/kun1ts4/stars-analytics/pkg/logger"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logger.WithError(err).Fatal("failed to load config")
+	}
+
 	httpClient := &http.Client{}
-	lastProceed := time.Now().UTC().Add(-2 * time.Hour)
+	lastProceed := time.Now().UTC().Add(-time.Duration(cfg.Ingestion.LookbackHours) * time.Hour)
 
-	brokersStr := os.Getenv("KAFKA_BROKERS")
-	if brokersStr == "" {
-		brokersStr = "kafka:9092"
-	}
-	brokers := strings.Split(brokersStr, ",")
+	producer := kafka.NewProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic, cfg.Kafka.Producer)
 
-	topic := os.Getenv("TOPIC")
-	if topic == "" {
-		topic = "github.events"
-	}
+	fetcher := ingestion.NewGHArchiveFetcher(httpClient, lastProceed, producer, cfg.Ingestion)
 
-	producer := kafka.NewProducer(brokers, topic)
+	logger.WithFields(logrus.Fields{
+		"gharchive_url":  cfg.Ingestion.GHArchiveURL,
+		"lookback_hours": cfg.Ingestion.LookbackHours,
+	}).Info("starting ingestion service")
 
-	fetcher := ingestion.NewGHArchiveFetcher(httpClient, lastProceed, producer)
 	if err := fetcher.Run(context.Background()); err != nil {
-		log.Fatalf("Failed to run fetcher: %v", err)
+		logger.WithError(err).Fatal("failed to run fetcher")
 	}
 }

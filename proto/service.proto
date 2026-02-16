@@ -5,6 +5,7 @@ option go_package = "github.com/kun1ts4/stars-analytics/proto;proto";
 
 service Stats {
   rpc TopN(NRequest) returns (TopResponse);
+  rpc Healthy(Empty) returns (HealthyResponse);
 }
 
 message NRequest{
@@ -19,4 +20,10 @@ message Repo{
   string name = 1;
   uint64 stars_last_hour = 2;
   uint64 total_stars = 3;
+}
+
+message Empty{}
+
+message HealthyResponse{
+  string status = 1;
 }

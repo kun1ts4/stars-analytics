@@ -1,0 +1,28 @@
+database:
+  host: postgres
+  port: 5432
+  user: postgres
+  password: postgres
+  dbname: postgres
+  sslmode: disable
+
+kafka:
+  brokers:
+    - kafka:9092
+  topic: github.events
+  producer:
+    batch_size: 100
+    batch_timeout_ms: 100
+    max_attempts: 3
+    required_acks: 1
+
+grpc:
+  port: 50051
+
+ingestion:
+  gharchive_url: https://data.gharchive.org/
+  lookback_hours: 2
+  workers: 10
+  channel_size: 10000
+  poll_interval_seconds: 60
+

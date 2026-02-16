@@ -34,11 +34,20 @@ func (e GHEvent) Validate() error {
 	if e.Type == "" {
 		return errors.New("type is required")
 	}
+	if e.Repo.ID == 0 {
+		return errors.New("repo ID is required")
+	}
 	if e.Repo.Name == "" {
 		return errors.New("repo Name is required")
 	}
+	if e.Actor.ID == 0 {
+		return errors.New("actor ID is required")
+	}
 	if e.Actor.Login == "" {
 		return errors.New("actor Login is required")
+	}
+	if e.CreatedAt.IsZero() {
+		return errors.New("created_at is required")
 	}
 	return nil
 }

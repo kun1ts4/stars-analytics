@@ -22,5 +22,5 @@ type ActionType string
 
 const (
 	// ActionStarred является типом действия для звезды репозитория.
-	ActionStarred ActionType = "stared"
+	ActionStarred ActionType = "starred"
 )

@@ -10,4 +10,5 @@ RUN go build -o ingestion ./cmd/ingestion/main.go
 FROM alpine:latest
 WORKDIR /root/
 COPY --from=builder /app/ingestion .
+COPY --from=builder /app/internal/config/config.yaml ./internal/config/config.yaml
 CMD ["./ingestion"]
