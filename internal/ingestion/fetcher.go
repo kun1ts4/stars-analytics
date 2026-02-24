@@ -50,24 +50,7 @@ func (f *GHArchiveFetcher) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second*5)
-			defer shutdownCancel()
-
-			done := make(chan struct{})
-			go func() {
-				err := f.producer.Close()
-				if err != nil {
-					logger.WithError(err).Error("failed to close producer")
-				}
-				close(done)
-			}()
-
-			select {
-			case <-done:
-				logger.Info("finished closing producer")
-			case <-shutdownCtx.Done():
-				logger.Info("shutting down producer")
-			}
+			return f.shutdown()
 		default:
 			nextHour := f.lastProcessed.Add(time.Hour)
 			if time.Since(nextHour) >= time.Hour {
@@ -78,6 +61,30 @@ func (f *GHArchiveFetcher) Run(ctx context.Context) error {
 				time.Sleep(pollInterval)
 			}
 		}
+	}
+}
+
+// shutdown выполняет корректное завершение работы fetcher.
+func (f *GHArchiveFetcher) shutdown() error {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer shutdownCancel()
+
+	done := make(chan struct{})
+	go func() {
+		err := f.producer.Close()
+		if err != nil {
+			logger.WithError(err).Error("failed to close producer")
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Info("finished closing producer")
+		return nil
+	case <-shutdownCtx.Done():
+		logger.Info("shutting down producer")
+		return shutdownCtx.Err()
 	}
 }
 

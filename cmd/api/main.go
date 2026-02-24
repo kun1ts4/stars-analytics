@@ -31,7 +31,7 @@ func main() {
 		logger.WithError(err).Fatal("failed to connect database")
 	}
 
-	serverManager, err := apiserver.NewServerManager(cfg, db)
+	serverManager, err := apiserver.NewManager(cfg, db)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to create server manager")
 	}

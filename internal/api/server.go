@@ -18,8 +18,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// ServerManager управляет жизненным циклом gRPC и HTTP серверов.
-type ServerManager struct {
+// Manager управляет жизненным циклом gRPC и HTTP серверов.
+type Manager struct {
 	grpcServer     *grpc.Server
 	metricsServer  *http.Server
 	grpcListener   net.Listener
@@ -28,8 +28,8 @@ type ServerManager struct {
 	grpcAddress    string
 }
 
-// NewServerManager создает новый ServerManager.
-func NewServerManager(cfg *config.Config, db *gorm.DB) (*ServerManager, error) {
+// NewManager создает новый Manager.
+func NewManager(cfg *config.Config, db *gorm.DB) (*Manager, error) {
 	prometheus.Init()
 
 	sqlDB, err := db.DB()
@@ -59,7 +59,7 @@ func NewServerManager(cfg *config.Config, db *gorm.DB) (*ServerManager, error) {
 		return nil, err
 	}
 
-	return &ServerManager{
+	return &Manager{
 		grpcServer:     grpcServer,
 		metricsServer:  metricsServer,
 		grpcListener:   listener,
@@ -70,7 +70,7 @@ func NewServerManager(cfg *config.Config, db *gorm.DB) (*ServerManager, error) {
 }
 
 // Start запускает оба сервера.
-func (sm *ServerManager) Start(ctx context.Context) {
+func (sm *Manager) Start(ctx context.Context) {
 	go func() {
 		logger.WithFields(logrus.Fields{
 			"address": sm.metricsAddress,
@@ -92,7 +92,7 @@ func (sm *ServerManager) Start(ctx context.Context) {
 }
 
 // Shutdown выполняет корректное завершение обоих серверов.
-func (sm *ServerManager) Shutdown(ctx context.Context) {
+func (sm *Manager) Shutdown(ctx context.Context) {
 	logger.Info("shutdown signal received, initiating graceful shutdown")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
