@@ -5,6 +5,8 @@ package main
 import (
 	"context"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/kun1ts4/stars-analytics/internal/config"
@@ -15,6 +17,9 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		logger.WithError(err).Fatal("failed to load config")
@@ -32,7 +37,7 @@ func main() {
 		"lookback_hours": cfg.Ingestion.LookbackHours,
 	}).Info("starting ingestion service")
 
-	if err := fetcher.Run(context.Background()); err != nil {
+	if err := fetcher.Run(ctx); err != nil {
 		logger.WithError(err).Fatal("failed to run fetcher")
 	}
 }

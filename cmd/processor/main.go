@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"os/signal"
+	"syscall"
 
 	"github.com/kun1ts4/stars-analytics/internal/config"
 	processor "github.com/kun1ts4/stars-analytics/internal/processor"
@@ -16,6 +18,9 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		logger.WithError(err).Fatal("failed to load config")
@@ -40,7 +45,7 @@ func main() {
 	logger.WithFields(logrus.Fields{
 		"topic": cfg.Kafka.Topic,
 	}).Info("starting processor")
-	err = proc.Run(context.Background())
+	err = proc.Run(ctx)
 	if err != nil {
 		logger.WithError(err).Fatal("error running processor")
 	}

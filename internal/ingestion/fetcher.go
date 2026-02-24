@@ -50,7 +50,24 @@ func (f *GHArchiveFetcher) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer shutdownCancel()
+
+			done := make(chan struct{})
+			go func() {
+				err := f.producer.Close()
+				if err != nil {
+					logger.WithError(err).Error("failed to close producer")
+				}
+				close(done)
+			}()
+
+			select {
+			case <-done:
+				logger.Info("finished closing producer")
+			case <-shutdownCtx.Done():
+				logger.Info("shutting down producer")
+			}
 		default:
 			nextHour := f.lastProcessed.Add(time.Hour)
 			if time.Since(nextHour) >= time.Hour {
@@ -65,8 +82,6 @@ func (f *GHArchiveFetcher) Run(ctx context.Context) error {
 }
 
 func (f *GHArchiveFetcher) fetchHour(t time.Time) error {
-	defer fmt.Printf("%s%s-%d.json.gz",
-		f.config.GHArchiveURL, t.Format("2006-01-02"), t.Hour())
 	if time.Since(t) < time.Hour {
 		return fmt.Errorf("data not ready yet, need to wait")
 	}
